@@ -1,6 +1,6 @@
 {
   "name": "memux",
-  "version": "1.0.0",
+  "version": "0.1.1",
   "description": "",
   "main": "lib/index.js",
   "directories": {
@@ -8,20 +8,18 @@
   },
   "scripts": {
     "build": "babel src --out-dir lib",
-    "watch": "babel src --out-dir lib -w"
+    "watch": "babel src --out-dir lib -w",
+    "prepublish": "npm run build"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Joost Verdoorn",
+  "license": "MIT",
   "dependencies": {
-    "cayley": "^0.2.1",
-    "kafka-node": "^1.0.7",
     "no-kafka": "^3.0.1",
     "rxjs": "^5.0.0-rc.4"
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",
-    "babel-preset-stage-0": "^6.16.0",
-    "nodemon": "^1.11.0"
+    "babel-preset-stage-0": "^6.16.0"
   },
   "babel": {
     "presets": [

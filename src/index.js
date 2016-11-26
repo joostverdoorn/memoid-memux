@@ -10,12 +10,12 @@ const onError = error => {
 };
 
 const memux = ({ url, name, input, output }) => {
-  const process = input ? createProcess(url, name, input) : null;
+  const source = input ? createSource(url, name, input) : null;
   const sink = output ? createSink(url, name, output) : null;
-  return { sink, process };
+  return { sink, source };
 };
 
-const createProcess = (connectionString, groupId, topic) => processor => {
+const createSource = (connectionString, groupId, topic) => processor => {
   const input = new Subject();
   const output = new Subject();
   const offsets = new Subject();
