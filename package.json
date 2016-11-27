@@ -1,6 +1,6 @@
 {
   "name": "memux",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "",
   "main": "lib/index.js",
   "directories": {
@@ -19,7 +19,8 @@
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",
-    "babel-preset-stage-0": "^6.16.0"
+    "babel-preset-stage-0": "^6.16.0",
+    "p-queue": "^0.2.0"
   },
   "babel": {
     "presets": [
