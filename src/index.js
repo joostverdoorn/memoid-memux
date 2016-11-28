@@ -44,15 +44,16 @@ const createSource = (connectionString, groupId, topic) => processor => {
     consumer.fetchOffset([{ topic, partition }]).then(([{ offset }]) => {
       consumer.subscribe(topic, partition, { offset }, (messageSet, topic, partition) => {
         messageSet.forEach(({ offset, message: { value }}) => {
+          const data = value.toString();
           let action;
 
           try {
-            action = JSON.parse(value.toString());
+            action = JSON.parse(data);
           } catch(error) {
             if (!error instanceof SyntaxError) throw error;
           }
 
-          log('received', value);
+          log('recv', data);
           if (isAction(action)) input.next({ action, topic, partition, offset });
         });
       });
