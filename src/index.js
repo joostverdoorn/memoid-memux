@@ -16,80 +16,79 @@ const onError = error => {
 
 const isQuad = quad => {
   return typeof quad === 'object' &&
-         typeof quad['subject'] === 'string' &&
-         typeof quad['predicate'] === 'string' &&
-         typeof quad['object'] === 'string';
+         typeof quad.subject === 'string' &&
+         typeof quad.predicate === 'string' &&
+         typeof quad.object === 'string';
 };
 
 const isAction = action => {
   return typeof action === 'object' &&
-         (action['action'] === 'write' || action['action'] === 'delete') &&
+         (action.type === 'write' || action.type === 'delete') &&
          isQuad(action.quad);
-}
-
-const memux = ({ url, name, input, output }) => {
-  const source = input ? createSource(url, name, input) : null;
-  const sink = output ? createSink(url, name, output) : null;
-  return { sink, source };
 };
 
-const createSource = (connectionString, groupId, topic) => processor => {
-  const input = new Subject();
-  const output = new Subject();
-  const offsets = new Subject();
+const isProgress = progress => {
+  return typeof progress === 'object' &&
+         typeof progress.offset === 'number' &&
+         typeof progress.partition === 'number' &&
+         typeof progress.topic === 'string';
+};
+
+const memux = ({ url, name, input = null, output = null }) => {
+  const { source, sink } = input ? createSource(url, name, input) : {};
+  const send = output ? createSend(url, name, output) : null;
+  return { source, sink, send };
+};
+
+const createSource = (connectionString, groupId, topic) => {
+  const sink = new Subject();
+  const source = new Subject();
   const consumer = new SimpleConsumer({ connectionString, groupId });
   const partition = 0;
 
   consumer.init().then(() => {
+    sink.bufferTime(OFFSET_COMMIT_INTERVAL).subscribe(progress => {
+      consumer.commitOffset(progress).catch(onError);
+    }, onError);
+
     consumer.fetchOffset([{ topic, partition }]).then(([{ offset }]) => {
       consumer.subscribe(topic, partition, { offset }, (messageSet, topic, partition) => {
         messageSet.forEach(({ offset, message: { value }}) => {
           const data = value.toString();
+          const progress = { topic, partition, offset };
+
           let action;
 
           try {
             action = JSON.parse(data);
-          } catch(error) {
+          } catch (error) {
             if (!error instanceof SyntaxError) throw error;
           }
 
-          log('recv', data);
-          if (isAction(action)) input.next({ action, topic, partition, offset });
+          log('RECV', data);
+          if (isAction(action)) source.next({ action, progress });
         });
       });
     });
   });
 
-  input.subscribe(({ action, topic, partition, offset }) => {
-    const observable = Observable.from(processor(action)).filter(isAction).publishReplay().refCount();
-    observable.subscribe(null, onError, () => {
-      offsets.next({ topic, partition, offset });
-      output.next(observable);
-    });
-  });
+  return { source, sink };
+}
 
-  offsets.bufferTime(OFFSET_COMMIT_INTERVAL).subscribe(offs => {
-    consumer.commitOffset(offs).catch(onError);
-  });
-
-  return output.concatAll();
-};
-
-const createSink = (connectionString, label, topic) => {
+const createSend = (connectionString, label, topic) => {
   const producer = new Producer({ connectionString });
-  const sink = new ReplaySubject();
-  const queue = new PQueue({ concurrency: 1 });
+  const ready = producer.init().catch(onError);
 
-  producer.init().then(() => {
-    sink.filter(isAction).subscribe(({ action, quad }) => {
-      const message = { value: JSON.stringify({ action, quad: { label, ...quad } }) };
-      queue.add(() => {
-        return producer.send({ topic, message }).then(() => log('sent', message.value))
-      }).catch(onError);
+  return ({ type, quad }) => {
+    if (!isAction({ type, quad })) return onError(new Error('Trying to send a non-action'));
+    const value = JSON.stringify({ type, quad: { label, ...quad } });
+
+    return ready.then(() => {
+      return producer.send({ topic, message: { value } });
+    }).then(() => {
+      return log('SEND', value);
     });
-  });
-
-  return sink;
+  };
 };
 
 module.exports = memux;
