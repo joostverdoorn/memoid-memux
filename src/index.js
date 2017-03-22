@@ -80,7 +80,7 @@ const createSend = (connectionString, label, topic) => {
   const ready = producer.init().catch(onError);
 
   return ({ type, quad }) => {
-    if (!isAction({ type, quad })) return onError(new Error('Trying to send a non-action'));
+    if (!isAction({ type, quad })) return onError(new Error('Trying to send a non-action: ' + JSON.stringify({ type, quad })));
     const value = JSON.stringify({ type, quad: { label, ...quad } });
 
     return ready.then(() => {
