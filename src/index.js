@@ -52,8 +52,7 @@ const createSource = (connectionString, groupId, topic) => {
     }, onError);
 
     consumer.fetchOffset([{ topic, partition }]).then(([{ offset }]) => {
-      offset = offset === LATEST_OFFSET ? EARLIEST_OFFSET : offset;
-      consumer.subscribe(topic, partition, { time: EARLIEST_OFFSET }, (messageSet, topic, partition) => {
+      consumer.subscribe(topic, partition, { offset: offset, time: offset === LATEST_OFFSET ? EARLIEST_OFFSET : null }, (messageSet, topic, partition) => {
         messageSet.forEach(({ offset, message: { value }}) => {
           const data = value.toString();
           const progress = { topic, partition, offset };
