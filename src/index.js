@@ -1,4 +1,4 @@
-const { Producer, SimpleConsumer, GroupConsumer, LATEST_OFFSET } = require('no-kafka');
+const { Producer, SimpleConsumer, GroupConsumer, LATEST_OFFSET, EARLIEST_OFFSET } = require('no-kafka');
 const { Observable, Subject, ReplaySubject } = require('rxjs');
 const PQueue = require('p-queue');
 
@@ -43,7 +43,7 @@ const memux = ({ url, name, input = null, output = null }) => {
 const createSource = (connectionString, groupId, topic) => {
   const sink = new Subject();
   const source = new Subject();
-  const consumer = new SimpleConsumer({ connectionString, groupId });
+  const consumer = new SimpleConsumer({ connectionString, groupId, recoveryOffset: EARLIEST_OFFSET });
   const partition = 0;
 
   consumer.init().then(() => {
@@ -52,7 +52,8 @@ const createSource = (connectionString, groupId, topic) => {
     }, onError);
 
     consumer.fetchOffset([{ topic, partition }]).then(([{ offset }]) => {
-      consumer.subscribe(topic, partition, { offset }, (messageSet, topic, partition) => {
+      offset = offset === LATEST_OFFSET ? EARLIEST_OFFSET : offset;
+      consumer.subscribe(topic, partition, { time: EARLIEST_OFFSET }, (messageSet, topic, partition) => {
         messageSet.forEach(({ offset, message: { value }}) => {
           const data = value.toString();
           const progress = { topic, partition, offset };
