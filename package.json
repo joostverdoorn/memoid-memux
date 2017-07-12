@@ -3,28 +3,26 @@
   "version": "0.3.1",
   "description": "",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "directories": {
     "lib": "./lib"
   },
   "scripts": {
-    "build": "babel src --out-dir lib",
-    "watch": "babel src --out-dir lib -w",
+    "build": "tsc",
+    "watch": "tsc -w",
     "prepublish": "npm run build"
   },
-  "author": "Joost Verdoorn",
+  "authors": [
+    "Joost Verdoorn <jpverdoorn@gmail.com>",
+    "Steffan Sluis <steffansluis@gmail.com>"
+  ],
   "license": "MIT",
   "dependencies": {
-    "no-kafka": "^3.0.1",
-    "rxjs": "^5.0.0-rc.4"
+    "@reactivex/rxjs": "^5.4.2",
+    "@types/node": "^8.0.10",
+    "no-kafka": "^3.2.0",
+    "p-queue": "^1.1.0",
+    "typescript": "^2.4.1"
   },
-  "devDependencies": {
-    "babel-cli": "^6.18.0",
-    "babel-preset-stage-0": "^6.16.0",
-    "p-queue": "^0.2.0"
-  },
-  "babel": {
-    "presets": [
-      "stage-0"
-    ]
-  }
+  "devDependencies": {}
 }
