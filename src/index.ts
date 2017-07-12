@@ -1,15 +1,17 @@
-const { Producer, SimpleConsumer, GroupConsumer, LATEST_OFFSET, EARLIEST_OFFSET } = require('no-kafka');
-const { Observable, Subject, ReplaySubject } = require('rxjs');
-const PQueue = require('p-queue');
+import { Observable, ReplaySubject, Subject } from '@reactivex/rxjs';
+import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer } from 'no-kafka';
+import PQueue from 'p-queue';
 
 const OFFSET_COMMIT_INTERVAL = 1000;
 const RETENTION_TIME = 1000 * 365 * 24;
 
 const log = (...things) => {
+  // tslint:disable-next-line no-console
   console.log(new Date().toISOString(), ...things);
-}
+};
 
 const onError = error => {
+  // tslint:disable-next-line no-console
   console.error(error);
   process.exit(1);
 };
@@ -35,7 +37,7 @@ const isProgress = progress => {
 };
 
 const memux = ({ url, name, input = null, output = null }) => {
-  const { source, sink } = input ? createSource(url, name, input) : {};
+  const { source, sink } = input ? createSource(url, name, input) : { source: undefined, sink: undefined };
   const send = output ? createSend(url, name, output) : null;
   return { source, sink, send };
 };
@@ -48,39 +50,48 @@ const createSource = (connectionString, groupId, topic) => {
 
   consumer.init().then(() => {
     sink.bufferTime(OFFSET_COMMIT_INTERVAL).subscribe(progress => {
-      consumer.commitOffset(progress).catch(onError);
+      (consumer as any).commitOffset(progress).catch(onError);
     }, onError);
 
-    consumer.fetchOffset([{ topic, partition }]).then(([{ offset }]) => {
-      consumer.subscribe(topic, partition, { offset: offset, time: offset === LATEST_OFFSET ? EARLIEST_OFFSET : null }, (messageSet, topic, partition) => {
-        messageSet.forEach(({ offset, message: { value }}) => {
+    consumer.fetchOffset([{ topic, partition }]).then(([{ offset }]: any) => {
+      consumer.subscribe(topic, partition, {
+        offset,
+        time: offset === LATEST_OFFSET ? EARLIEST_OFFSET : null
+      }, (messageSet, nextTopic, nextPartition) => {
+        return messageSet.forEach(({ offset: nextOffset, message: { value }}) => {
           const data = value.toString();
-          const progress = { topic, partition, offset };
+          const progress = { topic: nextTopic, partition: nextPartition, offset: nextOffset };
 
           let action;
 
           try {
             action = JSON.parse(data);
           } catch (error) {
-            if (!error instanceof SyntaxError) throw error;
+            if (!(error instanceof SyntaxError)) {
+              throw error;
+            }
           }
 
           log('RECV', data);
-          if (isAction(action)) source.next({ action, progress });
-        });
+          if (isAction(action)) {
+            source.next({ action, progress });
+          }
+        }) as any;
       });
     });
   });
 
   return { source, sink };
-}
+};
 
 const createSend = (connectionString, label, topic) => {
   const producer = new Producer({ connectionString });
   const ready = producer.init().catch(onError);
 
   return ({ type, quad }) => {
-    if (!isAction({ type, quad })) return onError(new Error('Trying to send a non-action: ' + JSON.stringify({ type, quad })));
+    if (!isAction({ type, quad })) {
+      return onError(new Error('Trying to send a non-action: ' + JSON.stringify({ type, quad })));
+    }
     const value = JSON.stringify({ type, quad: { label, ...quad } });
 
     return ready.then(() => {
@@ -91,4 +102,4 @@ const createSend = (connectionString, label, topic) => {
   };
 };
 
-module.exports = memux;
+export default memux;
