@@ -16,43 +16,69 @@ const onError = error => {
   process.exit(1);
 };
 
-const isQuad = quad => {
+export interface IQuad {
+  subject: string;
+  predicate: string;
+  object: string;
+}
+
+const isQuad = (quad): quad is IQuad => {
   return typeof quad === 'object' &&
          typeof quad.subject === 'string' &&
          typeof quad.predicate === 'string' &&
          typeof quad.object === 'string';
 };
 
-const isAction = action => {
+export interface IAction {
+  type: 'write' | 'delete';
+  quad: IQuad;
+}
+
+const isAction = (action): action is IAction => {
   return typeof action === 'object' &&
          (action.type === 'write' || action.type === 'delete') &&
          isQuad(action.quad);
 };
 
-const isProgress = progress => {
+export interface IProgress {
+  offset: number;
+  partition: number;
+  topic: string;
+}
+
+const isProgress = (progress): progress is IProgress => {
   return typeof progress === 'object' &&
          typeof progress.offset === 'number' &&
          typeof progress.partition === 'number' &&
          typeof progress.topic === 'string';
 };
 
+export type MemuxOptions = {
+  concurrency: number
+};
+
 export type MemuxConfig = {
-  url: string,
-  name: string,
-  input?: string,
-  output?: string
+  url: string;
+  name: string;
+  input?: string;
+  output?: string;
+  options: MemuxOptions
+};
+
+const DEFAULT_OPTIONS = {
+  concurrency: 8
 };
 
 const memux = (config: MemuxConfig) => {
-  const { url, name, input = null, output = null } = config;
+  const { url, name, input = null, output = null, options } = config;
   const { source, sink } = input ? createSource(url, name, input) : { source: undefined, sink: undefined };
-  const send = output ? createSend(url, name, output) : null;
+  const send = output ? createSend(url, name, output, options.concurrency) : null;
   return { source, sink, send };
 };
 
 const createSource = (connectionString, groupId, topic) => {
-  const sink = new Subject();
-  const source = new Subject();
+  const sink = new Subject<IAction>();
+  const source = new Subject<{ action: IAction, progress: IProgress }>();
   const consumer = new SimpleConsumer({ connectionString, groupId, recoveryOffset: EARLIEST_OFFSET });
   const partition = 0;
 
@@ -92,21 +118,25 @@ const createSource = (connectionString, groupId, topic) => {
   return { source, sink };
 };
 
-const createSend = (connectionString, label, topic) => {
+const createSend = (connectionString: string, label: string, topic: string, concurrency: number) => {
   const producer = new Producer({ connectionString });
   const ready = producer.init().catch(onError);
 
-  return ({ type, quad }) => {
+  const queue = new PQueue({
+    concurrency
+  });
+
+  return ({ type, quad }: IAction) => {
     if (!isAction({ type, quad })) {
       return onError(new Error('Trying to send a non-action: ' + JSON.stringify({ type, quad })));
     }
     const value = JSON.stringify({ type, quad: { label, ...quad } });
 
-    return ready.then(() => {
+    return queue.add( () => ready.then(() => {
       return producer.send({ topic, message: { value } });
     }).then(() => {
       return log('SEND', value);
-    });
+    }));
   };
 };
 
