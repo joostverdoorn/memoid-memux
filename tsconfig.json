@@ -27,7 +27,8 @@
     "exclude": [
         "node_modules",
         "typings/browser",
-        "typings/browser.d.ts"
+        "typings/browser.d.ts",
+        "lib"
     ],
     "compileOnSave": true,
     "buildOnSave": false,
