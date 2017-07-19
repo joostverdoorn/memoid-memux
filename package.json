@@ -56,5 +56,6 @@
       "babel-register"
     ],
     "babel": "inherit"
-  }
+  },
+  "repository": "git@github.com:knowledge-express/memux.git"
 }
