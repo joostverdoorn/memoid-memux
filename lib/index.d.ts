@@ -1,10 +1,11 @@
 import { Subject } from '@reactivex/rxjs';
-declare const memux: ({url, name, input, output}: {
-    url: any;
-    name: any;
-    input?: null;
-    output?: null;
-}) => {
+export declare type MemuxConfig = {
+    url: string;
+    name: string;
+    input?: string;
+    output?: string;
+};
+declare const memux: (config: MemuxConfig) => {
     source: Subject<{}>;
     sink: Subject<{}>;
     send: ({type, quad}: {

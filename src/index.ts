@@ -36,7 +36,15 @@ const isProgress = progress => {
          typeof progress.topic === 'string';
 };
 
-const memux = ({ url, name, input = null, output = null }) => {
+export type MemuxConfig = {
+  url: string,
+  name: string,
+  input?: string,
+  output?: string
+};
+
+const memux = (config: MemuxConfig) => {
+  const { url, name, input = null, output = null } = config;
   const { source, sink } = input ? createSource(url, name, input) : { source: undefined, sink: undefined };
   const send = output ? createSend(url, name, output) : null;
   return { source, sink, send };
