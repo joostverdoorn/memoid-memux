@@ -6,6 +6,10 @@ jobs:
       - image: node:8
         environment:
           NODE_ENV: test
+      - image: zookeeper:latest
+      - image: ches/kafka:latest
+        environment:
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
     steps:
       - checkout
       - restore_cache:

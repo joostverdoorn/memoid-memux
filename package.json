@@ -10,7 +10,7 @@
   "scripts": {
     "clean": "rm -rf lib",
     "pretest": "npm run clean && tsc --inlineSourceMap --outDir lib",
-    "test": "nyc ava",
+    "test": "nyc ava --verbose",
     "posttest": "npm run clean && npm run build",
     "watch-test": "nodemon -w test -x 'npm run test'",
     "coverage": "codecov",
