@@ -1,4 +1,4 @@
-import { Observable, ReplaySubject, Subject } from '@reactivex/rxjs';
+import { Observable, Subject } from '@reactivex/rxjs';
 import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer } from 'no-kafka';
 import PQueue from 'p-queue';
 
@@ -16,37 +16,37 @@ const onError = error => {
   process.exit(1);
 };
 
-export interface IQuad {
+export type Quad = {
   subject: string;
   predicate: string;
   object: string;
-}
+};
 
-const isQuad = (quad): quad is IQuad => {
+export const isQuad = (quad): quad is Quad => {
   return typeof quad === 'object' &&
          typeof quad.subject === 'string' &&
          typeof quad.predicate === 'string' &&
          typeof quad.object === 'string';
 };
 
-export interface IAction {
+export type Action = {
   type: 'write' | 'delete';
-  quad: IQuad;
-}
+  quad: Quad;
+};
 
-const isAction = (action): action is IAction => {
+export const isAction = (action): action is Action => {
   return typeof action === 'object' &&
          (action.type === 'write' || action.type === 'delete') &&
          isQuad(action.quad);
 };
 
-export interface IProgress {
+export type Progress = {
   offset: number;
   partition: number;
   topic: string;
-}
+};
 
-const isProgress = (progress): progress is IProgress => {
+export const isProgress = (progress): progress is Progress => {
   return typeof progress === 'object' &&
          typeof progress.offset === 'number' &&
          typeof progress.partition === 'number' &&
@@ -77,8 +77,8 @@ const memux = (config: MemuxConfig) => {
 };
 
 const createSource = (connectionString, groupId, topic) => {
-  const sink = new Subject<IAction>();
-  const source = new Subject<{ action: IAction, progress: IProgress }>();
+  const sink = new Subject<Action>();
+  const source = new Subject<{ action: Action, progress: Progress }>();
   const consumer = new SimpleConsumer({ connectionString, groupId, recoveryOffset: EARLIEST_OFFSET });
   const partition = 0;
 
@@ -126,7 +126,7 @@ const createSend = (connectionString: string, label: string, topic: string, conc
     concurrency
   });
 
-  return ({ type, quad }: IAction) => {
+  return ({ type, quad }: Action) => {
     if (!isAction({ type, quad })) {
       return onError(new Error('Trying to send a non-action: ' + JSON.stringify({ type, quad })));
     }
