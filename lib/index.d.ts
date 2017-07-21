@@ -1,4 +1,4 @@
-import { Subject } from '@reactivex/rxjs';
+import { Observable, Subject } from '@reactivex/rxjs';
 export declare type Quad = {
     subject: string;
     predicate: string;
@@ -27,11 +27,11 @@ export declare type MemuxConfig = {
     options: MemuxOptions;
 };
 declare const memux: (config: MemuxConfig) => {
-    source: Subject<{
-        action: Action;
-        progress: Progress;
-    }>;
-    sink: Subject<Action>;
-    send: ({type, quad}: Action) => any;
+    source: Observable<Promise<any>>;
+} | {
+    sink: Subject<{}>;
+} | {
+    source: Observable<Promise<any>>;
+    sink: Subject<{}>;
 };
 export default memux;

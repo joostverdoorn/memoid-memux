@@ -1,14 +1,21 @@
 import { Subject } from '@reactivex/rxjs';
 import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer } from 'no-kafka';
-import PQueue from 'p-queue';
+import PQueue = require('p-queue');
 
 import { Action, isAction, Progress, Quad  } from './index';
 
 const log = console.log.bind(console);
 
-const createSink = (connectionString: string, label: string, topic: string, concurrency: number) => {
+export type SinkConfig = {
+  url: string;
+  name: string;
+  topic: string;
+  concurrency: number;
+};
+
+export const createSink = ({ url, name, topic, concurrency }) => {
   const subject = new Subject();
-  const producer = new Producer({ connectionString });
+  const producer = new Producer({ connectionString: url });
 
   const queue = new PQueue({
     concurrency
@@ -22,7 +29,7 @@ const createSink = (connectionString: string, label: string, topic: string, conc
     if (!isAction({ type, quad })) {
       throw new Error('Trying to send a non-action: ' + JSON.stringify({ type, quad }));
     }
-    const value = JSON.stringify({ type, quad: { label, ...quad } });
+    const value = JSON.stringify({ type, quad: { label: name, ...quad } });
 
     return queue.add( async () => {
       await producer.send({ topic, message: { value } });
