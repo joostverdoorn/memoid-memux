@@ -1,16 +1,17 @@
 import { Observable, Subject } from '@reactivex/rxjs';
-import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer } from 'no-kafka';
+import { EARLIEST_OFFSET, GroupConsumer, ConsistentAssignmentStrategy } from 'no-kafka';
+import * as uuid from 'node-uuid';
 
 import { Action, isAction, Progress, Quad  } from './index';
+
 
 const OFFSET_COMMIT_INTERVAL = 1000;
 const RETENTION_TIME = 1000 * 365 * 24;
 
 export type SourceConfig = {
-  connectionString: string;
-  groupId: string;
+  url: string;
+  name: string;
   topic: string;
-  partition: number;
 };
 
 export type KafkaMessage = {
@@ -35,26 +36,41 @@ const parseMessage = ({ offset, message: { value } }: KafkaMessage) => {
   return { message, offset };
 };
 
-const createSource = ({ connectionString, groupId, topic, partition }: SourceConfig) => {
-  const consumer = new SimpleConsumer({ connectionString, groupId, recoveryOffset: EARLIEST_OFFSET });
+export const createSource = ({ url, name, topic }: SourceConfig) => {
+  // const consumer = new SimpleConsumer({ connectionString: url, groupId: name, recoveryOffset: EARLIEST_OFFSET });
+  const consumer = new GroupConsumer({ connectionString: url, groupId: name, recoveryOffset: EARLIEST_OFFSET });
 
-  return new Observable((observer) => {
-    (async () => {
-      await consumer.init();
-      const [ { offset } ] = await consumer.fetchOffset([{ topic, partition }]) as any;
-      consumer.subscribe(topic, partition, {
-        offset,
-        time: offset === LATEST_OFFSET ? EARLIEST_OFFSET : null
-      }, async (messageSet, nextTopic, nextPartition) => {
-        return messageSet.map(parseMessage).forEach(({ message, offset}) => {
-          if (isAction(message)) {
-            const progress = { topic: nextTopic, partition: nextPartition, offset };
-            observer.next({ action: message, progress });
-          } else {
-            console.error(new Error(`Non-action encountered: ${message}`));
-          }
-        });
+  const observable = new Observable<{ action: Action, progress: Progress }>((observer) => {
+    const dataHandler = async (messageSet, nextTopic, nextPartition) => {
+      return messageSet.map(parseMessage).forEach(({ message, offset}) => {
+        if (isAction(message)) {
+          const progress = { topic: nextTopic, partition: nextPartition, offset };
+          observer.next({ action: message, progress });
+        } else {
+          console.error(new Error(`Non-action encountered: ${message}`));
+        }
       });
-    })();
+    };
+
+    const strategies = [{
+      subscriptions: [ topic ],
+      metadata: {
+        id: `${name}-${uuid.v4()}`,
+        weight: 50
+      },
+      strategy: new ConsistentAssignmentStrategy(),
+      handler: dataHandler
+
+    }]
+
+    consumer.init(strategies);
   });
+
+  const commitOffset = async ({ action, progress }) => {
+    await consumer.commitOffset(progress);
+    return action;
+  };
+
+  return observable
+    .map(commitOffset);
 };
