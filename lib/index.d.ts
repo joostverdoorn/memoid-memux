@@ -27,11 +27,11 @@ export declare type MemuxConfig = {
     options: MemuxOptions;
 };
 declare const memux: (config: MemuxConfig) => {
-    source: Observable<Promise<any>>;
+    source: Observable<any>;
 } | {
     sink: Subject<{}>;
 } | {
-    source: Observable<Promise<any>>;
+    source: Observable<any>;
     sink: Subject<{}>;
 };
 export default memux;

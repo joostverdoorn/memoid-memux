@@ -17,7 +17,8 @@ export type Quad = {
 };
 
 export const isQuad = (quad): quad is Quad => {
-  return typeof quad === 'object' &&
+  return quad != null &&
+         typeof quad === 'object' &&
          typeof quad.subject === 'string' &&
          typeof quad.predicate === 'string' &&
          typeof quad.object === 'string';
@@ -29,7 +30,8 @@ export type Action = {
 };
 
 export const isAction = (action): action is Action => {
-  return typeof action === 'object' &&
+  return action != null &&
+         typeof action === 'object' &&
          (action.type === 'write' || action.type === 'delete') &&
          isQuad(action.quad);
 };
@@ -41,7 +43,8 @@ export type Progress = {
 };
 
 export const isProgress = (progress): progress is Progress => {
-  return typeof progress === 'object' &&
+  return progress != null &&
+         typeof progress === 'object' &&
          typeof progress.offset === 'number' &&
          typeof progress.partition === 'number' &&
          typeof progress.topic === 'string';

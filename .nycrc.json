@@ -1,6 +1,6 @@
 {
   "check-coverage": true,
-  "per-file": true,
+  "per-file": false,
   "lines": 5,
   "statements": 5,
   "functions": 5,
