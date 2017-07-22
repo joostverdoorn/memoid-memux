@@ -13,7 +13,11 @@ export type SinkConfig = {
   concurrency: number;
 };
 
-export const createSink = ({ url, name, topic, concurrency }) => {
+export const createSink = ({ url, name, topic, concurrency = 8 }) => {
+  if (!(typeof url === 'string' && typeof name === 'string' && typeof topic === 'string')) {
+    throw new Error('createSink should be called with a config containing a url, name and topic.');
+  }
+
   const subject = new Subject();
   const producer = new Producer({ connectionString: url });
 

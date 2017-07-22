@@ -9,5 +9,5 @@ export declare const createSink: ({url, name, topic, concurrency}: {
     url: any;
     name: any;
     topic: any;
-    concurrency: any;
+    concurrency?: number;
 }) => Subject<{}>;

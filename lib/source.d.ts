@@ -11,4 +11,4 @@ export declare type KafkaMessage = {
     };
     offset?: number;
 };
-export declare const createSource: ({url, name, topic}: SourceConfig) => Observable<Promise<any>>;
+export declare const createSource: ({url, name, topic}: SourceConfig) => Observable<any>;

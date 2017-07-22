@@ -37,19 +37,35 @@ const parseMessage = ({ offset, message: { value } }: KafkaMessage) => {
 };
 
 export const createSource = ({ url, name, topic }: SourceConfig) => {
+  if (!(typeof url === 'string' && typeof name === 'string' && typeof topic === 'string')) {
+    throw new Error('createSource should be called with a config containing a url, name and topic.');
+  }
   // const consumer = new SimpleConsumer({ connectionString: url, groupId: name, recoveryOffset: EARLIEST_OFFSET });
   const consumer = new GroupConsumer({ connectionString: url, groupId: name, recoveryOffset: EARLIEST_OFFSET });
 
-  const observable = new Observable<{ action: Action, progress: Progress }>((observer) => {
-    const dataHandler = async (messageSet, nextTopic, nextPartition) => {
-      return messageSet.map(parseMessage).forEach(({ message, offset}) => {
-        if (isAction(message)) {
-          const progress = { topic: nextTopic, partition: nextPartition, offset };
-          observer.next({ action: message, progress });
-        } else {
-          console.error(new Error(`Non-action encountered: ${message}`));
-        }
+  const outerObservable = new Observable<Observable<{ action: Action }>>((outerObserver) => {
+    const dataHandler = async (messageSet, topic, partition) => {
+      const innerObservable = new Observable<{ action: Action }>((observer) => {
+        let progress;
+
+        const messagesSent = Promise.all(messageSet.map(parseMessage).map(({ message, offset}) => {
+          if (isAction(message)) {
+            observer.next({ action: message });
+            progress = { topic, partition, offset };
+          } else {
+            console.error(new Error(`Non-action encountered: ${message}`));
+          }
+        }));
+
+        const teardown = async () => {
+          await messagesSent;
+          return consumer.commitOffset(progress);
+        };
+
+        return teardown;
       });
+
+      return outerObserver.next(innerObservable);
     };
 
     const strategies = [{
@@ -63,14 +79,8 @@ export const createSource = ({ url, name, topic }: SourceConfig) => {
 
     }]
 
-    consumer.init(strategies);
+    consumer.init(strategies).catch(outerObserver.error);
   });
 
-  const commitOffset = async ({ action, progress }) => {
-    await consumer.commitOffset(progress);
-    return action;
-  };
-
-  return observable
-    .map(commitOffset);
+  return outerObservable.flatMap(Observable.merge);
 };
