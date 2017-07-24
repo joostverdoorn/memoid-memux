@@ -4,6 +4,7 @@ import * as uuid from 'node-uuid';
 
 import { Action, isAction, Progress, Quad  } from './index';
 
+import * as Logger from './logger';
 
 const OFFSET_COMMIT_INTERVAL = 1000;
 const RETENTION_TIME = 1000 * 365 * 24;
@@ -36,12 +37,20 @@ const parseMessage = ({ offset, message: { value } }: KafkaMessage) => {
   return { message, offset };
 };
 
-export const createSource = ({ url, name, topic }: SourceConfig) => {
+export const createSource = ({ url, name, topic }: SourceConfig): Observable<Action> => {
   if (!(typeof url === 'string' && typeof name === 'string' && typeof topic === 'string')) {
     throw new Error('createSource should be called with a config containing a url, name and topic.');
   }
   // const consumer = new SimpleConsumer({ connectionString: url, groupId: name, recoveryOffset: EARLIEST_OFFSET });
-  const consumer = new GroupConsumer({ connectionString: url, groupId: name, recoveryOffset: EARLIEST_OFFSET });
+  const consumer = new GroupConsumer({
+    connectionString: url,
+    groupId: name,
+    startingOffset: EARLIEST_OFFSET,
+    recoveryOffset: EARLIEST_OFFSET,
+    logger: {
+      logFunction: Logger.log
+    }
+  });
 
   const outerObservable = new Observable<Observable<{ action: Action }>>((outerObserver) => {
     const dataHandler = async (messageSet, topic, partition) => {

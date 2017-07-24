@@ -13,6 +13,7 @@
       "no-namespace": true,
       "no-unused-expression": true,
       "no-unused-variable": true,
+      "ordered-imports": false,
       "quotemark": [true, "single"]
     },
     "rulesDirectory": []

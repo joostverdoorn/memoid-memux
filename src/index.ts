@@ -3,7 +3,10 @@ import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer
 import PQueue from 'p-queue';
 
 import { createSource } from './source';
-import { createSink } from './sink';
+import { createSink, KafkaSubject } from './sink';
+
+export * from './source';
+export * from './sink';
 
 import * as Logger from './logger';
 
@@ -66,9 +69,11 @@ const DEFAULT_OPTIONS = {
   concurrency: 8
 };
 
-const memux = (config: MemuxConfig) => {
+const memux = (config: MemuxConfig): { source?: Observable<Action>, sink?: KafkaSubject<Action> } => {
   const { url, name, input = null, output = null, options = DEFAULT_OPTIONS } = config;
-  if (input == null && output == null) throw new Error('An input, ouput or both must be provided.');
+  if (input == null && output == null) {
+    throw new Error('An input, ouput or both must be provided.');
+  }
 
   if (output == null) {
     return {

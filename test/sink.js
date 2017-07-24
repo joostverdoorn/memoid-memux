@@ -28,19 +28,27 @@ test('it should be able to connect to Kafka', t => {
   const url = 'localhost:9092';
   const name = 'test';
   const topic = 'mock_output_topic';
-  const res = createSink({ url, name, topic });
-
-  const log = console.log.bind(console);
-  const error = console.error.bind(console);
+  const sink = createSink({ url, name, topic });
 
   const quad = { subject: '', predicate: '', object: '' };
   const action = { type: 'write', quad };
 
-  res.subscribe({
-    next: (...args) => t.pass(...args),
-    error: (...args) => t.fail(...args),
-    complete: (...args) => t.fail(...args)
-  });
+  sink.next(action);
 
-  return res.next(action);
+  return new Promise((resolve, reject) => {
+    sink.subscribe({
+      next: (...args) => {
+        // console.log(...args);
+        resolve(...args)
+      },
+      error: (...args) => {
+        // console.log(...args);
+        reject(...args)
+      },
+      complete: (...args) => {
+        // console.log(...args);
+        reject(...args)
+      }
+    });
+  }).then((...args) => t.pass(...args), (...args) => t.fail(...args));
 });
