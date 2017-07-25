@@ -30,16 +30,17 @@ test('it should be able to connect to Kafka', t => {
   const topic = 'mock_output_topic';
   const sink = createSink({ url, name, topic });
 
-  const quad = { subject: '', predicate: '', object: '' };
+  const quad = { subject: 'sink-subject', predicate: 'sink-predicate', object: 'sink-object' };
   const action = { type: 'write', quad };
 
   sink.next(action);
 
   return new Promise((resolve, reject) => {
-    sink.subscribe({
+    const subscription = sink.subscribe({
       next: (...args) => {
         // console.log(...args);
         resolve(...args)
+        subscription.unsubscribe();
       },
       error: (...args) => {
         // console.log(...args);
@@ -50,5 +51,8 @@ test('it should be able to connect to Kafka', t => {
         reject(...args)
       }
     });
-  }).then((...args) => t.pass(...args), (...args) => t.fail(...args));
+  }).then((...args) => {
+    const [ a ] = args;
+    return t.is(JSON.stringify(a), JSON.stringify(action));
+  }, (...args) => t.fail(...args));
 });
