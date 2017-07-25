@@ -52,19 +52,21 @@ export const createSource = ({ url, name, topic }: SourceConfig): Observable<Act
     }
   });
 
-  const outerObservable = new Observable<Observable<{ action: Action }>>((outerObserver) => {
+  const outerObservable = new Observable<Observable<Action>>((outerObserver) => {
     const dataHandler = async (messageSet, topic, partition) => {
-      const innerObservable = new Observable<{ action: Action }>((observer) => {
+      const innerObservable = new Observable<Action>((observer) => {
         let progress;
 
         const messagesSent = Promise.all(messageSet.map(parseMessage).map(({ message, offset}) => {
           if (isAction(message)) {
-            observer.next({ action: message });
+            observer.next(message as Action);
             progress = { topic, partition, offset };
           } else {
             console.error(new Error(`Non-action encountered: ${message}`));
           }
-        }));
+        })).then(() => {
+          observer.complete();
+        });
 
         const teardown = async () => {
           await messagesSent;
@@ -91,5 +93,30 @@ export const createSource = ({ url, name, topic }: SourceConfig): Observable<Act
     consumer.init(strategies).catch(outerObserver.error);
   });
 
-  return outerObservable.flatMap(Observable.merge);
+  // return new Observable(observer => {
+  //   console.log('Subscribing to outer obervable');
+  //   outerObservable.subscribe({
+  //     next: (observable) => {
+  //       return new Promise((resolve) => {
+  //         console.log('Subscribing to inner obervable');
+  //         const subscription = observable.subscribe({
+  //           next: (value) => {
+  //             console.log(`Received value from inner observable:`, value);
+  //             observer.next(value);
+  //           },
+  //           error: observer.error,
+  //           complete: () => {
+  //             console.log('Inner obervable completed. Calling teardown and moving on to the next inner observable');
+  //             // Call teardown logic of innerObservable to commit offset
+  //             subscription.unsubscribe();
+  //             resolve();
+  //           }
+  //         });
+  //       });
+  //     },
+  //     error: observer.error,
+  //   })
+  // });
+
+  return outerObservable.concatMap(o => o);
 };

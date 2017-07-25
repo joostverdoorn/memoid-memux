@@ -14,6 +14,7 @@ export declare class KafkaSubject<T> extends Subject<T> {
     private _queue;
     constructor(url: string, name: string, topic: string);
     _send: ({type, quad}: Action) => Promise<any>;
+    next(value?: T): Promise<any>;
 }
 export declare const createSink: ({url, name, topic, concurrency}: {
     url: any;
