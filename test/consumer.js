@@ -55,7 +55,7 @@ test('it should be able to connect to Kafka', t => {
       }
     });
 
-    producer.sink.next(action);
+    producer.sink.next({ action: action });
   })
   .then((...args) => {
     t.is(readCount, 1);
@@ -92,42 +92,17 @@ test('it should start at the latest committed offset', t => {
 
   return Promise.all(actions.map((a, i) => queue.add(async () => {
     console.log('Sending next action. Remaining:', actions.length - 1 - i);
-    return producer.sink.next(a);
+    return producer.sink.next({ action: a });
   })))
-
-  // return new Promise((resolve, reject) => {
-  //
-  //
-  //   Promise.all(actions.map((a, i) => queue.add(() => {
-  //     console.log('Sending next action. Remaining:', actions.length - 1 - i);
-  //     return sink.next(a));
-  //   })).then(() => resolve());
-  //
-  //   queue.add(() => {
-  //     return
-  //   });
-  //
-  //   sink.next(fillerAction);
-  //   sink.subscribe({
-  //     next: () => {
-  //       if (actions.length === 0) {
-  //         console.log('Actions sent. Moving on.')
-  //         resolve();
-  //         // return;
-  //         // return queue.add(() => )
-  //       }
-  //     }
-  //   });
-  // })
   .then(() => {
     return new Promise((resolve, reject) => {
       const consumer1 = Consumer({ url, name: 'test-commit-source1', topic });
       const subscription = consumer1.source.subscribe({
         next: (...args) => {
           readCount += 1;
-          const [ [ a, p ] ] = args;
+          const [ { action: a, progress: p } ] = args;
 
-          consumer1.sink.next(p);
+          consumer1.sink.next({ progress: p });
           // Read all the actions until the one we just sent
           if (a.quad.subject === 'commit-action') {
             resolve(...args);
@@ -151,10 +126,10 @@ test('it should start at the latest committed offset', t => {
       const subscription = consumer2.source.subscribe({
         next: (...args) => {
 
-          const [ [ a, p ] ] = args;
+          const [ { action: a, progress: p } ] = args;
           readCount2 += 1;
 
-          consumer2.sink.next(p);
+          consumer2.sink.next({ progress: p });
           // Read all the actions except one, then unsubscribe
           if (readCount2 === readCount - 1) {
             console.log('Done reading second time. Final readCount:', readCount2);
@@ -178,10 +153,10 @@ test('it should start at the latest committed offset', t => {
       // Subscribe one more time to see if we commited the offset correctly
       const subscription = consumer2.source.subscribe({
         next: (...args) => {
-          const [ [ a, p ] ] = args;
+          const [ { action: a, progress: p } ] = args;
 
           // Read the remaining action (which should be the one we initially sent)
-          consumer2.sink.next(p);
+          consumer2.sink.next({ progress: p });
           resolve(...args);
           // subscription.unsubscribe();
         },
@@ -195,7 +170,7 @@ test('it should start at the latest committed offset', t => {
     });
   })
   .then((...args) => {
-    const [ [ a ] ] = args;
+    const [ { action: a } ] = args;
     return t.is(a.quad.subject, 'commit-action');
   }, (...args) => t.fail(...args));
 });

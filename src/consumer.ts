@@ -2,7 +2,7 @@ import { Observable, Subject } from '@reactivex/rxjs';
 import { EARLIEST_OFFSET, GroupConsumer, ConsistentAssignmentStrategy } from 'no-kafka';
 import * as uuid from 'node-uuid';
 
-import { Action, isAction, Progress, Quad, Duplex  } from './index';
+import { Action, Actionable, isAction, Progress, Progressable, Quad, Duplex  } from './index';
 
 import * as Logger from './logger';
 
@@ -37,12 +37,11 @@ const parseMessage = ({ offset, message: { value } }: KafkaMessage) => {
   return { message, offset };
 };
 
-export type Consumer = Duplex<[ Action, Progress ], Progress>;
+export type Consumer = Duplex<Actionable & Progressable, Progressable>;
 export const Consumer = ({ url, name, topic }: ConsumerConfig): Consumer => {
   if (!(typeof url === 'string' && typeof name === 'string' && typeof topic === 'string')) {
     throw new Error('Consumer should be called with a config containing a url, name and topic.');
   }
-  // const consumer = new SimpleConsumer({ connectionString: url, groupId: name, recoveryOffset: EARLIEST_OFFSET });
   const consumer = new GroupConsumer({
     connectionString: url,
     groupId: name,
@@ -53,43 +52,28 @@ export const Consumer = ({ url, name, topic }: ConsumerConfig): Consumer => {
     }
   });
 
-  const sink = new Subject<Progress>();
+  const sink = new Subject<Progressable>();
 
   sink.subscribe({
-    next: (p) => {
+    next: ({ progress }) => {
       console.log('Committing progress.');
-      consumer.commitOffset(p);
-      // observer.complete();
-      // sinkSubscription.unsubscribe();
-      // if (JSON.stringify(p) === JSON.stringify(progress)) {
-      // }
+      consumer.commitOffset(progress);
     }
   });
 
-  const source = new Observable<Observable<[Action, Progress]>>((outerObserver) => {
+  const source = new Observable<Observable<Actionable & Progressable>>((outerObserver) => {
     const dataHandler = async (messageSet, topic, partition) => {
-      const innerObservable = new Observable<[Action, Progress]>((observer) => {
+      const innerObservable = new Observable<Actionable & Progressable>((observer) => {
         let progress;
 
         const messagesSent = Promise.all(messageSet.map(parseMessage).map(({ message, offset}) => {
           if (isAction(message)) {
             progress = { topic, partition, offset };
-
-            // const sinkSubscription =
-
-            observer.next([ message as Action, progress ]);
+            observer.next({ action: message as Action, progress });
           } else {
             console.error(new Error(`Non-action encountered: ${message}`));
           }
         }));
-
-        const teardown = async () => {
-          console.log('Teardown logic called. Committing offset.');
-          await messagesSent;
-          return consumer.commitOffset(progress);
-        };
-
-        // return teardown;
       });
 
       return outerObserver.next(innerObservable);

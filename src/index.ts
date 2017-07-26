@@ -11,6 +11,9 @@ import { Observable, Subject } from '@reactivex/rxjs';
 import { Consumer } from './consumer';
 import { Producer } from './producer';
 
+export * from './consumer';
+export * from './producer';
+
 import * as Logger from './logger';
 
 const OFFSET_COMMIT_INTERVAL = 1000;
@@ -20,6 +23,7 @@ export type Quad = {
   subject: string;
   predicate: string;
   object: string;
+  label?: string;
 };
 
 export const isQuad = (quad): quad is Quad => {
@@ -42,6 +46,8 @@ export const isAction = (action): action is Action => {
          isQuad(action.quad);
 };
 
+export type Actionable = { action: Action };
+
 export type Progress = {
   offset: number;
   partition: number;
@@ -55,6 +61,8 @@ export const isProgress = (progress): progress is Progress => {
          typeof progress.partition === 'number' &&
          typeof progress.topic === 'string';
 };
+
+export type Progressable = { progress: Progress };
 
 export type MemuxOptions = {
   concurrency: number

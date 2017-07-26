@@ -34,7 +34,7 @@ test('it should be able to connect to Kafka', t => {
   const quad = { subject: 'sink-subject', predicate: 'sink-predicate', object: 'sink-object' };
   const action = { type: 'write', quad };
 
-  producer.sink.next(action);
+  producer.sink.next({ action });
 
   return new Promise((resolve, reject) => {
     const subscription = producer.source.subscribe({
@@ -53,7 +53,7 @@ test('it should be able to connect to Kafka', t => {
       }
     });
   }).then((...args) => {
-    const [ [ a ] ] = args;
+    const [ { action: a } ] = args;
     return t.is(JSON.stringify(a), JSON.stringify({ type: action.type, quad: Object.assign({ label: name }, action.quad) }));
   }, (...args) => t.fail(...args));
 });

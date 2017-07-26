@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { Action, Progress, Duplex } from './index';
+import { Actionable, Progressable, Duplex } from './index';
 export declare type ConsumerConfig = {
     url: string;
     name: string;
@@ -11,5 +11,5 @@ export declare type KafkaMessage = {
     };
     offset?: number;
 };
-export declare type Consumer = Duplex<[Action, Progress], Progress>;
-export declare const Consumer: ({url, name, topic}: ConsumerConfig) => Duplex<[Action, Progress], Progress>;
+export declare type Consumer = Duplex<Actionable & Progressable, Progressable>;
+export declare const Consumer: ({url, name, topic}: ConsumerConfig) => Duplex<Actionable & Progressable, Progressable>;
