@@ -1,12 +1,15 @@
 import { Observable, Subject } from '@reactivex/rxjs';
-import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer } from 'no-kafka';
-import PQueue from 'p-queue';
+// import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer } from 'no-kafka';
+// import PQueue from 'p-queue';
 
-import { createSource } from './source';
-import { createSink, KafkaSubject } from './sink';
+// import { createSource } from './source';
+// import { createSink, KafkaSubject } from './sink';
 
-export * from './source';
-export * from './sink';
+// export * from './source';
+// export * from './sink';
+
+import { Consumer } from './consumer';
+import { Producer } from './producer';
 
 import * as Logger from './logger';
 
@@ -69,7 +72,12 @@ const DEFAULT_OPTIONS = {
   concurrency: 8
 };
 
-const memux = (config: MemuxConfig): { source?: Observable<Action>, sink?: KafkaSubject<Action> } => {
+export type Readable<T> = { source: Observable<T> };
+export type Writeable<T> = { sink: Subject<T> };
+export type Duplex<U,V> = Readable<U> & Writeable<V>;
+
+const memux = (config: MemuxConfig): { consumer?: Consumer, producer?: Producer } => {
+  // return null;
   const { url, name, input = null, output = null, options = DEFAULT_OPTIONS } = config;
   if (input == null && output == null) {
     throw new Error('An input, ouput or both must be provided.');
@@ -77,19 +85,19 @@ const memux = (config: MemuxConfig): { source?: Observable<Action>, sink?: Kafka
 
   if (output == null) {
     return {
-      source: createSource({ url, name, topic: input })
+      consumer: Consumer({ url, name, topic: input })
     };
   }
 
   if (input == null) {
     return {
-      sink: createSink({ url, name, topic: output, concurrency: options.concurrency })
+      producer: Producer({ url, name, topic: output, concurrency: options.concurrency })
     };
   }
 
   return {
-    source: createSource({ url, name, topic: input }),
-    sink: createSink({ url, name, topic: output, concurrency: options.concurrency })
+    consumer: Consumer({ url, name, topic: input }),
+    producer: Producer({ url, name, topic: output, concurrency: options.concurrency })
   };
 };
 

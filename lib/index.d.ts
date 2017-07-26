@@ -1,7 +1,4 @@
-import { Observable } from '@reactivex/rxjs';
-import { KafkaSubject } from './sink';
-export * from './source';
-export * from './sink';
+import { Observable, Subject } from '@reactivex/rxjs';
 export declare type Quad = {
     subject: string;
     predicate: string;
@@ -29,8 +26,15 @@ export declare type MemuxConfig = {
     output?: string;
     options: MemuxOptions;
 };
+export declare type Readable<T> = {
+    source: Observable<T>;
+};
+export declare type Writeable<T> = {
+    sink: Subject<T>;
+};
+export declare type Duplex<U, V> = Readable<U> & Writeable<V>;
 declare const memux: (config: MemuxConfig) => {
-    source?: Observable<Action>;
-    sink?: KafkaSubject<Action>;
+    consumer?: Duplex<[Action, Progress], Progress>;
+    producer?: Duplex<[Action, Progress], Action>;
 };
 export default memux;

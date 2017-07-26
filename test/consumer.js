@@ -1,37 +1,38 @@
 import test from 'ava';
-import { Observable } from '@reactivex/rxjs';
+import { Observable, Subject } from '@reactivex/rxjs';
 import PQueue from 'p-queue';
 
-import { createSource } from '../lib/source';
-import { createSink } from '../lib/sink';
+import { Consumer } from '../lib/consumer';
+import { Producer } from '../lib/producer';
 
 test('it exists', t => {
-  t.is(typeof createSource, 'function');
+  t.is(typeof Consumer, 'function');
 });
 
 test('it requires a url, name and topic', t => {
-  t.throws(() => createSource(), Error);
-  t.throws(() => createSource({}), Error);
+  t.throws(() => Consumer(), Error);
+  t.throws(() => Consumer({}), Error);
 
   const url = 'localhost:9092';
   const name = 'test';
   const topic = 'mock_output_topic';
-  t.notThrows(() => createSource({ url, name, topic }), Error);
+  t.notThrows(() => Consumer({ url, name, topic }), Error);
 });
 
-test('it returns an observable source', t => {
+test('it returns a source observable and sink subject', t => {
   const url = 'localhost:9092';
   const name = 'test';
   const topic = 'mock_output_topic';
-  const res = createSource({ url, name, topic });
-  t.is(res instanceof Observable, true);
+  const res = Consumer({ url, name, topic });
+  t.is(res.source instanceof Observable, true);
+  t.is(res.sink instanceof Subject, true);
 });
 
 test('it should be able to connect to Kafka', t => {
   const url = 'localhost:9092';
   const name = 'test';
   const topic = 'mock_output_topic';
-  const sink = createSink({ url, name, topic });
+  const producer = Producer({ url, name, topic });
 
   const quad = { subject: '', predicate: '', object: '' };
   const action = { type: 'write', quad };
@@ -39,8 +40,8 @@ test('it should be able to connect to Kafka', t => {
   let readCount = 0;
 
   return new Promise((resolve, reject) => {
-    const source = createSource({ url, name, topic });
-    const subscription = source.subscribe({
+    const consumer = Consumer({ url, name, topic });
+    const subscription = consumer.source.subscribe({
       next: (...args) => {
         readCount += 1;
         resolve(...args);
@@ -54,7 +55,7 @@ test('it should be able to connect to Kafka', t => {
       }
     });
 
-    sink.next(action);
+    producer.sink.next(action);
   })
   .then((...args) => {
     t.is(readCount, 1);
@@ -62,11 +63,11 @@ test('it should be able to connect to Kafka', t => {
 
 });
 
-test('it should commit offset only after having read a messageSet', t => {
+test('it should start at the latest committed offset', t => {
   const url = 'localhost:9092';
   const name = 'test-commit';
   const topic = 'special_commit_topic';
-  const sink = createSink({ url, name, topic });
+  const producer = Producer({ url, name, topic });
 
   const quad = { subject: 'commit-action', predicate: '', object: '' };
   const action = { type: 'write', quad };
@@ -89,9 +90,9 @@ test('it should commit offset only after having read a messageSet', t => {
     action
   ];
 
-  return Promise.all(actions.map((a, i) => queue.add(() => {
+  return Promise.all(actions.map((a, i) => queue.add(async () => {
     console.log('Sending next action. Remaining:', actions.length - 1 - i);
-    return sink.next(a);
+    return producer.sink.next(a);
   })))
 
   // return new Promise((resolve, reject) => {
@@ -120,17 +121,19 @@ test('it should commit offset only after having read a messageSet', t => {
   // })
   .then(() => {
     return new Promise((resolve, reject) => {
-      const source1 = createSource({ url, name: 'test-commit-source1', topic });
-      const subscription = source1.subscribe({
+      const consumer1 = Consumer({ url, name: 'test-commit-source1', topic });
+      const subscription = consumer1.source.subscribe({
         next: (...args) => {
           readCount += 1;
-          const [ a ] = args;
+          const [ [ a, p ] ] = args;
 
+          consumer1.sink.next(p);
           // Read all the actions until the one we just sent
           if (a.quad.subject === 'commit-action') {
             resolve(...args);
             console.log('Done reading. Final readCount:', readCount);
             subscription.unsubscribe();
+            return;
           }
         },
         error: (...args) => {
@@ -144,16 +147,20 @@ test('it should commit offset only after having read a messageSet', t => {
   })
   .then(() => {
     return new Promise((resolve, reject) => {
-      const source2 = createSource({ url, name: 'test-commit-source2', topic });
-      const subscription = source2.subscribe({
+      const consumer2 = Consumer({ url, name: 'test-commit-source2', topic });
+      const subscription = consumer2.source.subscribe({
         next: (...args) => {
+
+          const [ [ a, p ] ] = args;
           readCount2 += 1;
 
+          consumer2.sink.next(p);
           // Read all the actions except one, then unsubscribe
           if (readCount2 === readCount - 1) {
             console.log('Done reading second time. Final readCount:', readCount2);
             resolve(...args);
-            // subscription.unsubscribe();
+            subscription.unsubscribe();
+            return;
           }
         },
         error: (...args) => {
@@ -167,13 +174,16 @@ test('it should commit offset only after having read a messageSet', t => {
   })
   .then(() => {
     return new Promise((resolve, reject) => {
-      const source2 = createSource({ url, name: 'test-commit-source2', topic });
+      const consumer2 = Consumer({ url, name: 'test-commit-source2', topic });
       // Subscribe one more time to see if we commited the offset correctly
-      const subscription = source2.subscribe({
+      const subscription = consumer2.source.subscribe({
         next: (...args) => {
+          const [ [ a, p ] ] = args;
+
           // Read the remaining action (which should be the one we initially sent)
+          consumer2.sink.next(p);
           resolve(...args);
-          subscription.unsubscribe();
+          // subscription.unsubscribe();
         },
         error: (...args) => {
           reject(...args)
@@ -185,7 +195,7 @@ test('it should commit offset only after having read a messageSet', t => {
     });
   })
   .then((...args) => {
-    const [ a ] = args;
+    const [ [ a ] ] = args;
     return t.is(a.quad.subject, 'commit-action');
   }, (...args) => t.fail(...args));
 });
