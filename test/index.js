@@ -1,31 +1,74 @@
 import test from 'ava';
-import memux from '../lib';
+import memux, { isQuad, isAction, isProgress } from '../lib';
 
 test('it exists', t => {
   t.not(memux, undefined);
 });
 
-test('it returns a source', t => {
-  const res = memux({});
-  t.is('source' in res, true);
-});
-
-test('it returns a sink', t => {
-  const res = memux({});
-  t.is('sink' in res, true);
-});
-
-test('it should be able to connect to Kafka', t => {
+test('it requires a url, name and input and/or output', t => {
+  t.throws(() => memux(), Error);
+  t.throws(() => memux({}), Error);
   const url = 'localhost:9092';
-  const output = 'mock_output_topic';
-  const name = 'test';
+  t.notThrows(() => memux({ url, name: '', input: '' }), Error);
+  t.notThrows(() => memux({ url, name: '', output: '' }), Error);
+  t.notThrows(() => memux({ url, name: '', input: '', output: '' }), Error);
+});
 
-  const log = console.log.bind(console);
-  const error = console.error.bind(console);
-
-  const { send } = memux({ url, output, name });
+test('isQuad', t => {
   const quad = { subject: '', predicate: '', object: '' };
-  const action = { type: 'write', quad };
+  t.is(isQuad(quad), true);
 
-  return (async () => send(action))().then(() => t.pass(true), t.fail);
+  let notQuad;
+  t.not(isQuad(notQuad), true);
+  notQuad = null;
+  t.not(isQuad(notQuad), true);
+  notQuad = 1234;
+  t.not(isQuad(notQuad), true);
+  notQuad = 'test';
+  t.not(isQuad(notQuad), true);
+  notQuad = {};
+  t.not(isQuad(notQuad), true);
+  notQuad = () => {};
+  t.not(isQuad(notQuad), true);
+});
+
+test('isAction', t => {
+  const quad = { subject: '', predicate: '', object: '' };
+
+  let action;
+  action = { type: 'write', quad };
+  t.is(isAction(action), true);
+  action = { type: 'delete', quad };
+  t.is(isAction(action), true);
+
+  let notAction;
+  t.not(isAction(notAction), true);
+  notAction = null;
+  t.not(isAction(notAction), true);
+  notAction = 1234;
+  t.not(isAction(notAction), true);
+  notAction = 'test';
+  t.not(isAction(notAction), true);
+  notAction = {};
+  t.not(isAction(notAction), true);
+  notAction = () => {};
+  t.not(isAction(notAction), true);
+});
+
+test('isProgress', t => {
+  const progress = { offset: 1234, partition: 1234, topic: '' };
+  t.is(isProgress(progress), true);
+
+  let notProgress;
+  t.not(isProgress(notProgress), true);
+  notProgress = null;
+  t.not(isProgress(notProgress), true);
+  notProgress = 1234;
+  t.not(isProgress(notProgress), true);
+  notProgress = 'test';
+  t.not(isProgress(notProgress), true);
+  notProgress = {};
+  t.not(isProgress(notProgress), true);
+  notProgress = () => {};
+  t.not(isProgress(notProgress), true);
 });
