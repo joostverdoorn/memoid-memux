@@ -1,18 +1,5 @@
 import test from 'ava';
-import memux, { isQuad, isAction, isProgress } from '../lib';
-
-test('it exists', t => {
-  t.not(memux, undefined);
-});
-
-test('it requires a url, name and input and/or output', t => {
-  t.throws(() => memux(), Error);
-  t.throws(() => memux({}), Error);
-  const url = 'localhost:9092';
-  t.notThrows(() => memux({ url, name: '', input: '' }), Error);
-  t.notThrows(() => memux({ url, name: '', output: '' }), Error);
-  t.notThrows(() => memux({ url, name: '', input: '', output: '' }), Error);
-});
+import { isQuad, isAction, isProgress } from '../lib';
 
 test('isQuad', t => {
   const quad = { subject: '', predicate: '', object: '' };

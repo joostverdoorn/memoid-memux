@@ -2,11 +2,11 @@ import { Observable, Subject } from '@reactivex/rxjs';
 import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer } from 'no-kafka';
 import PQueue from 'p-queue';
 
-import { createSource } from './source';
-import { createSink, KafkaSubject } from './sink';
+// import { createSource } from './consumer';
+// import { createSend } from './producer';
 
-export * from './source';
-export * from './sink';
+export * from './consumer';
+export * from './producer';
 
 import * as Logger from './logger';
 
@@ -69,28 +69,28 @@ const DEFAULT_OPTIONS = {
   concurrency: 8
 };
 
-const memux = (config: MemuxConfig): { source?: Observable<Action>, sink?: KafkaSubject<Action> } => {
-  const { url, name, input = null, output = null, options = DEFAULT_OPTIONS } = config;
-  if (input == null && output == null) {
-    throw new Error('An input, ouput or both must be provided.');
-  }
+// const memux = (config: MemuxConfig): { source?: Observable<Action>, sink?: KafkaSubject<Action> } => {
+//   const { url, name, input = null, output = null, options = DEFAULT_OPTIONS } = config;
+//   if (input == null && output == null) {
+//     throw new Error('An input, ouput or both must be provided.');
+//   }
+//
+//   if (output == null) {
+//     return {
+//       source: createSource({ url, name, topic: input })
+//     };
+//   }
+//
+//   if (input == null) {
+//     return {
+//       sink: createSink({ url, name, topic: output, concurrency: options.concurrency })
+//     };
+//   }
+//
+//   return {
+//     source: createSource({ url, name, topic: input }),
+//     sink: createSink({ url, name, topic: output, concurrency: options.concurrency })
+//   };
+// };
 
-  if (output == null) {
-    return {
-      source: createSource({ url, name, topic: input })
-    };
-  }
-
-  if (input == null) {
-    return {
-      sink: createSink({ url, name, topic: output, concurrency: options.concurrency })
-    };
-  }
-
-  return {
-    source: createSource({ url, name, topic: input }),
-    sink: createSink({ url, name, topic: output, concurrency: options.concurrency })
-  };
-};
-
-export default memux;
+// export default memux;
