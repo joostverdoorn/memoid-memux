@@ -1,10 +1,10 @@
 /// <reference types="node" />
-import { Action } from './index';
-export declare type SourceConfig = {
+import { Operation } from './index';
+export declare type SourceConfig<T> = {
     url: string;
     name: string;
     topic: string;
-    receiveFn: (action: Action) => Promise<void>;
+    receive: (action: Operation<T>) => Promise<void>;
 };
 export declare type KafkaMessage = {
     message: {
@@ -12,4 +12,4 @@ export declare type KafkaMessage = {
     };
     offset?: number;
 };
-export declare const createReceive: ({url, name, topic, receiveFn}: SourceConfig) => Promise<any>;
+export declare const createReceive: <T>({url, name, topic, receive}: SourceConfig<T>) => Promise<any>;

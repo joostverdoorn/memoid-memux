@@ -1,45 +1,27 @@
 import test from 'ava';
-import { isQuad, isAction, isProgress } from '../lib';
+import { isOperation, isProgress } from '../lib';
 
-test('isQuad', t => {
-  const quad = { subject: '', predicate: '', object: '' };
-  t.is(isQuad(quad), true);
-
-  let notQuad;
-  t.not(isQuad(notQuad), true);
-  notQuad = null;
-  t.not(isQuad(notQuad), true);
-  notQuad = 1234;
-  t.not(isQuad(notQuad), true);
-  notQuad = 'test';
-  t.not(isQuad(notQuad), true);
-  notQuad = {};
-  t.not(isQuad(notQuad), true);
-  notQuad = () => {};
-  t.not(isQuad(notQuad), true);
-});
-
-test('isAction', t => {
+test('isOperation', t => {
   const quad = { subject: '', predicate: '', object: '' };
 
-  let action;
-  action = { type: 'write', quad };
-  t.is(isAction(action), true);
-  action = { type: 'delete', quad };
-  t.is(isAction(action), true);
+  let operation;
+  operation = { action: 'write', key: 'bla', data: quad };
+  t.is(isOperation(operation), true);
+  operation = { action: 'delete', key: 'bla', data: quad };
+  t.is(isOperation(operation), true);
 
-  let notAction;
-  t.not(isAction(notAction), true);
-  notAction = null;
-  t.not(isAction(notAction), true);
-  notAction = 1234;
-  t.not(isAction(notAction), true);
-  notAction = 'test';
-  t.not(isAction(notAction), true);
-  notAction = {};
-  t.not(isAction(notAction), true);
-  notAction = () => {};
-  t.not(isAction(notAction), true);
+  let notOperation;
+  t.not(isOperation(notOperation), true);
+  notOperation = null;
+  t.not(isOperation(notOperation), true);
+  notOperation = 1234;
+  t.not(isOperation(notOperation), true);
+  notOperation = 'test';
+  t.not(isOperation(notOperation), true);
+  notOperation = {};
+  t.not(isOperation(notOperation), true);
+  notOperation = () => {};
+  t.not(isOperation(notOperation), true);
 });
 
 test('isProgress', t => {

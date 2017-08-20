@@ -2,7 +2,7 @@ import { Subject } from '@reactivex/rxjs';
 import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer } from 'no-kafka';
 import PQueue = require('p-queue');
 
-import { Action, isAction, Progress, Quad  } from './index';
+import { Operation, isOperation, Progress  } from './index';
 
 import * as Logger from './logger';
 
@@ -22,15 +22,15 @@ export const createSend = async ({ url, name, topic, concurrency = 8 }) => {
     concurrency
   });
 
-  const send = ({ type, quad }: Action) => {
-    if (!isAction({ type, quad })) {
-      throw new Error('Trying to send a non-action: ' + JSON.stringify({ type, quad }));
+  const send = <T>({ action, key, data }: Operation<T>) => {
+    if (!isOperation<T>({ action, key, data })) {
+      throw new Error('Trying to send a non-action: ' + JSON.stringify({ action, key, data }));
     }
-    const value = JSON.stringify({ type, quad: { label: name, ...quad } });
+    const value = JSON.stringify({ label: name, action, key, data });
 
     return queue.add( async () => {
-      await producer.send({ topic, message: { value } });
-      return Logger.log('SEND', value);
+      await producer.send({ topic, message: { key, value } });
+      return Logger.log('SEND', key, value);
     });
   };
 
