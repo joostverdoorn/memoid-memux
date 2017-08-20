@@ -1,7 +1,5 @@
-import { Observable } from '@reactivex/rxjs';
-import { KafkaSubject } from './sink';
-export * from './source';
-export * from './sink';
+export * from './consumer';
+export * from './producer';
 export declare type Quad = {
     subject: string;
     predicate: string;
@@ -29,8 +27,3 @@ export declare type MemuxConfig = {
     output?: string;
     options: MemuxOptions;
 };
-declare const memux: (config: MemuxConfig) => {
-    source?: Observable<Action>;
-    sink?: KafkaSubject<Action>;
-};
-export default memux;

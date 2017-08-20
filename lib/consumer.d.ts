@@ -1,10 +1,10 @@
 /// <reference types="node" />
-import { Observable } from '@reactivex/rxjs';
 import { Action } from './index';
 export declare type SourceConfig = {
     url: string;
     name: string;
     topic: string;
+    receiveFn: (action: Action) => Promise<void>;
 };
 export declare type KafkaMessage = {
     message: {
@@ -12,4 +12,4 @@ export declare type KafkaMessage = {
     };
     offset?: number;
 };
-export declare const createSource: ({url, name, topic}: SourceConfig) => Observable<Action>;
+export declare const createReceive: ({url, name, topic, receiveFn}: SourceConfig) => Promise<any>;
