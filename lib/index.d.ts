@@ -12,8 +12,10 @@ export declare type Progress = {
     topic: string;
 };
 export declare const isProgress: (progress: any) => progress is Progress;
-export declare type MemuxOptions = {
-    concurrency: number;
+export declare type SSLConfig = {
+    ca?: string;
+    cert?: string;
+    key?: string;
 };
 export declare type MemuxConfig<T> = {
     url: string;
@@ -21,7 +23,8 @@ export declare type MemuxConfig<T> = {
     input?: string;
     output?: string;
     receive?: (action: Operation<T>) => Promise<void>;
-    options: MemuxOptions;
+    concurrency?: number;
+    ssl?: SSLConfig;
 };
-declare function memux<T>({name, url, input, output, receive, options}: MemuxConfig<T>): Promise<(<T>({action, key, data}: Operation<T>) => any)>;
+declare function memux<T>({name, url, input, output, receive, concurrency, ssl}: MemuxConfig<T>): Promise<(<T>({action, key, data}: Operation<T>) => any)>;
 export default memux;

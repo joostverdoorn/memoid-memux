@@ -2,7 +2,7 @@ import { Observable, Subject } from '@reactivex/rxjs';
 import { EARLIEST_OFFSET, GroupConsumer, ConsistentAssignmentStrategy } from 'no-kafka';
 import * as uuid from 'node-uuid';
 
-import { Operation, isOperation, Progress  } from './index';
+import { Operation, isOperation, Progress, SSLConfig  } from './index';
 
 import * as Logger from './logger';
 
@@ -14,6 +14,7 @@ export type SourceConfig<T> = {
   name: string;
   topic: string;
   receive: (action: Operation<T>) => Promise<void>;
+  ssl?: SSLConfig
 };
 
 export type KafkaMessage = {
@@ -38,20 +39,21 @@ const parseMessage = ({ offset, message: { value } }: KafkaMessage) => {
   return { message, offset };
 };
 
-export const createReceive = async <T>({ url, name, topic, receive }: SourceConfig<T>) => {
+export const createReceive = async <T>({ url, name, topic, receive, ssl = {} }: SourceConfig<T>) => {
   if (!(typeof url === 'string' && typeof name === 'string' && typeof topic === 'string')) {
     throw new Error('createSource should be called with a config containing a url, name, topic and receiveFn.');
   }
 
   const consumer = new GroupConsumer({
     connectionString: url,
+    ssl,
     groupId: name,
     startingOffset: EARLIEST_OFFSET,
     recoveryOffset: EARLIEST_OFFSET,
     logger: {
       logFunction: Logger.log
     }
-  });
+  } as any);
 
   const dataHandler = async (messageSet, topic, partition) => {
     const messagesSent = Promise.all(messageSet.map(parseMessage).map(({ message, offset}) => {
