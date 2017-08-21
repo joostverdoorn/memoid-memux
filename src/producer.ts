@@ -1,18 +1,27 @@
 import { Subject } from '@reactivex/rxjs';
-import { EARLIEST_OFFSET, GroupConsumer, LATEST_OFFSET, Producer, SimpleConsumer } from 'no-kafka';
+import { Producer } from 'no-kafka';
 import PQueue = require('p-queue');
 
-import { Operation, isOperation, Progress  } from './index';
+import { Operation, isOperation, Progress, SSLConfig } from './index';
 
 import * as Logger from './logger';
 
-export const createSend = async ({ url, name, topic, concurrency = 8 }) => {
+export type SendConfig<T> = {
+  url: string;
+  name: string;
+  topic: string;
+  concurrency: number;
+  ssl?: SSLConfig
+};
+
+export const createSend = async <T>({ url, name, topic, concurrency = 8, ssl = {} }: SendConfig<T>) => {
   if (!(typeof url === 'string' && typeof name === 'string' && typeof topic === 'string')) {
     throw new Error('createSend should be called with a config containing a url, name and topic.');
   }
 
   const producer = new Producer({
     connectionString: url,
+    ssl,
     logger: {
       logFunction: Logger.log
     }

@@ -33,8 +33,10 @@ export const isProgress = (progress): progress is Progress => {
          typeof progress.topic === 'string';
 };
 
-export type MemuxOptions = {
-  concurrency: number
+export type SSLConfig = {
+  ca?: string
+  cert?: string
+  key?: string
 };
 
 export type MemuxConfig<T> = {
@@ -43,26 +45,29 @@ export type MemuxConfig<T> = {
   input?: string;
   output?: string;
   receive?: (action: Operation<T>) => Promise<void>;
-  options: MemuxOptions
+  concurrency?: number,
+  ssl?: SSLConfig
 };
 
 const DEFAULT_OPTIONS = {
   concurrency: 8
 };
 
-async function memux<T>({ name, url, input, output, receive, options = DEFAULT_OPTIONS }: MemuxConfig<T>) {
+async function memux<T>({ name, url, input, output, receive, concurrency, ssl }: MemuxConfig<T>) {
   if (input != null && receive != null) await createReceive({
     name,
     url,
     topic: input,
-    receive
+    receive,
+    ssl
   });
 
   if (output != null) return createSend({
     name,
     url,
     topic: output,
-    concurrency: options.concurrency
+    concurrency: concurrency,
+    ssl
   });
 }
 
