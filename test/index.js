@@ -1,5 +1,5 @@
 import test from 'ava';
-import { isOperation, isProgress } from '../lib';
+import memux, { isOperation, isProgress } from '../lib';
 
 test('isOperation', t => {
   const quad = { subject: '', predicate: '', object: '' };
@@ -40,4 +40,48 @@ test('isProgress', t => {
   t.not(isProgress(notProgress), true);
   notProgress = () => {};
   t.not(isProgress(notProgress), true);
+});
+
+test('it send and receives', async (t) => {
+  try {
+    let _resolve, _reject;
+    const resultPromise = new Promise((resolve, reject) => {
+      _resolve = resolve;
+      _reject = reject;
+    });
+
+    const receive = (message) => {
+      console.log('Received message!', message);
+      _resolve(message);
+    };
+
+    const send = await memux({
+      name: 'dummy-broker',
+      url: 'tcp://localhost:9092',
+      input: 'test_update_requests',
+      output: 'test_update_requests',
+      receive,
+      options: {
+        concurrency: 1
+      }
+    });
+
+    const doc = {
+      '@id': 'http://some.domain/testdoc',
+      'http://schema.org/name': [ 'bla' ],
+    };
+    const operation = { action: 'write', key: doc['@id'], data: doc}
+
+    const waitingPromise = new Promise((resolve) => {
+      setTimeout(() => resolve(), 2000);
+    });
+
+    await send(operation);
+
+    let result = await resultPromise;
+    return t.deepEqual(result, { ...operation, label: 'dummy-broker' });
+  } catch(e) {
+    console.error(e);
+    throw e;
+  }
 });
