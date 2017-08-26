@@ -59,6 +59,7 @@ async function memux<T>({ name, url, input, output, receive, concurrency, ssl }:
     url,
     topic: input,
     receive,
+    concurrency: concurrency,
     ssl
   });
 

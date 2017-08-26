@@ -27,6 +27,7 @@ export const createSend = async <T>({ url, name, topic, concurrency = 8, ssl = {
     }
   });
 
+  console.log('Queueing send with concurrency:', concurrency);
   const queue = new PQueue({
     concurrency
   });

@@ -6,6 +6,7 @@ export declare type SourceConfig<T> = {
     topic: string;
     receive: (action: Operation<T>) => Promise<void>;
     ssl?: SSLConfig;
+    concurrency?: number;
 };
 export declare type KafkaMessage = {
     message: {
@@ -13,4 +14,4 @@ export declare type KafkaMessage = {
     };
     offset?: number;
 };
-export declare const createReceive: <T>({url, name, topic, receive, ssl}: SourceConfig<T>) => Promise<any>;
+export declare const createReceive: <T>({url, name, topic, receive, ssl, concurrency}: SourceConfig<T>) => Promise<any>;
