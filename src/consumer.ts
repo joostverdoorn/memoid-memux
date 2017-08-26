@@ -1,6 +1,7 @@
 import { Observable, Subject } from '@reactivex/rxjs';
 import { EARLIEST_OFFSET, GroupConsumer, ConsistentAssignmentStrategy } from 'no-kafka';
 import * as uuid from 'node-uuid';
+import PQueue = require('p-queue');
 
 import { Operation, isOperation, Progress, SSLConfig  } from './index';
 
@@ -14,7 +15,8 @@ export type SourceConfig<T> = {
   name: string;
   topic: string;
   receive: (action: Operation<T>) => Promise<void>;
-  ssl?: SSLConfig
+  ssl?: SSLConfig,
+  concurrency?: number
 };
 
 export type KafkaMessage = {
@@ -39,7 +41,7 @@ const parseMessage = ({ offset, message: { value } }: KafkaMessage) => {
   return { message, offset };
 };
 
-export const createReceive = async <T>({ url, name, topic, receive, ssl = {} }: SourceConfig<T>) => {
+export const createReceive = async <T>({ url, name, topic, receive, ssl = {}, concurrency = 8 }: SourceConfig<T>) => {
   if (!(typeof url === 'string' && typeof name === 'string' && typeof topic === 'string')) {
     throw new Error('createSource should be called with a config containing a url, name, topic and receiveFn.');
   }
@@ -55,13 +57,19 @@ export const createReceive = async <T>({ url, name, topic, receive, ssl = {} }: 
     }
   } as any);
 
+  console.log('Queueing receive with concurrency:', concurrency);
+  const queue = new PQueue({
+    concurrency
+  });
+
   const dataHandler = async (messageSet, topic, partition) => {
     const messagesSent = Promise.all(messageSet.map(parseMessage).map(({ message, offset}) => {
       if (!isOperation<T>(message)) throw new Error(`Non-action encountered: ${message}`);
       const progress = { topic, partition, offset };
-      return Promise.resolve(receive(message)).then(() => {
+      return queue.add(async () => {
+        await receive(message);
         return consumer.commitOffset(progress);
-      });
+      })
     }));
   };
 
