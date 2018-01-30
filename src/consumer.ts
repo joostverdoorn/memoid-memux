@@ -63,7 +63,7 @@ export const createReceive = async <T>({ url, name, topic, receive, ssl = {}, co
   });
 
   const dataHandler = async (messageSet, topic, partition) => {
-    const messagesSent = Promise.all(messageSet.map(parseMessage).map(({ message, offset}) => {
+    return await Promise.all(messageSet.map(parseMessage).map(({ message, offset}) => {
       if (!isOperation<T>(message)) throw new Error(`Non-action encountered: ${message}`);
       const progress = { topic, partition, offset };
       return queue.add(async () => {
