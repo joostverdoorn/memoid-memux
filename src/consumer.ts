@@ -52,6 +52,7 @@ export const createReceive = async <T>({ url, name, topic, receive, ssl = {}, co
     groupId: name,
     startingOffset: EARLIEST_OFFSET,
     recoveryOffset: EARLIEST_OFFSET,
+    heartbeatTimeout: 5000,
     logger: {
       logFunction: Logger.log
     }
